@@ -1,25 +1,3 @@
-// Layout of Contract:
-// version
-// imports
-// errors
-// interfaces, libraries, contracts
-// Type declarations
-// State variables
-// Events
-// Modifiers
-// Functions
-
-// Layout of Functions:
-// constructor
-// receive function (if exists)
-// fallback function (if exists)
-// external
-// public
-// internal
-// private
-// internal & private view & pure functions
-// external & public view & pure functions
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
@@ -32,25 +10,30 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/inter
  * @dev This contract is used to create a smart contract raffle that implements chanlink VRF & chainlink automation.
  * @author Pickeldj.
  */
+
 contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /**
      * Errors
      */
     error Raffle__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 raffleState);
     error Raffle__TransferFailed();
-    error Raffle__SendMoreToEnterRaffle();
+    error Raffle__NotEnoughEthSent();
     error Raffle__RaffleNotOpen();
+
     /**
      * Type declarations
      */
+
     enum RaffleState {
         OPEN,
         CALCULATING
     }
+
     /**
      * State Variables
      */
     //Chainlink VRF variables
+
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_gasLane;
@@ -64,22 +47,26 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     address private s_recentWinner;
     address payable[] private s_players;
     RaffleState private s_raffleState;
+
     /**
      * Events
      */
-    event RequestedRaffleWinner(uint256 indexed requestId);
+
     event RaffleEnter(address indexed player);
+    event RequestedRaffleWinner(uint256 indexed requestId);
     event WinnerPicked(address indexed player);
+
     /**
      * Functions
      */
+
     constructor(
-        uint64 subscriptionId,
-        bytes32 gasLane, // keyHash
-        uint256 interval,
         uint256 entranceFee,
-        uint32 callbackGasLimit,
-        address vrfCoordinatorV2
+        uint256 interval,
+        address vrfCoordinatorV2,
+        bytes32 gasLane,
+        uint64 subscriptionId,
+        uint32 callbackGasLimit
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
@@ -94,7 +81,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function enterRaffle() external payable {
         // Check if the amount of eth sent is enough to enter the raffle.
         if (msg.value < i_entranceFee) {
-            revert Raffle__SendMoreToEnterRaffle();
+            revert Raffle__NotEnoughEthSent();
         }
         // Check if the raffle is open.
         if (s_raffleState != RaffleState.OPEN) {
@@ -105,6 +92,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         //Emit an event to show that we updated players array.
         emit RaffleEnter(msg.sender);
     }
+
     /**
      * @dev This is the function that the Chainlink Keeper nodes call
      * they look for `upkeepNeeded` to return True.
@@ -146,6 +134,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS
         );
+        // Emit an event RequestedRaffleWinner to pick a winner.
         emit RequestedRaffleWinner(requestId);
     }
 
@@ -153,6 +142,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
      * @dev This is the function that Chainlink VRF node
      * calls to send the money to the random winner.
      */
+
     function fulfillRandomWords(uint256, /* requestId */ uint256[] memory randomWords) internal override {
         // s_players size 10
         // randomNumber 202
@@ -166,6 +156,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_players = new address payable[](0);
         s_raffleState = RaffleState.OPEN;
         s_lastTimeStamp = block.timestamp;
+        // Transfer the money to the winner.
         emit WinnerPicked(recentWinner);
         (bool success,) = recentWinner.call{value: address(this).balance}("");
         // require(success, "Transfer failed");
@@ -177,6 +168,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /**
      * Getter Functions
      */
+
     function getRaffleState() public view returns (RaffleState) {
         return s_raffleState;
     }
