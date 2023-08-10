@@ -54,7 +54,7 @@ contract RaffleTest is StdCheats, Test {
     /////////////////////////
     // enterRaffle         //
     /////////////////////////
-
+    /**Test our Raffle__NotEnoughEthSent custom error */
     function testRaffleRevertsWHenYouDontPayEnought() public {
         // Arrange
         vm.prank(PLAYER);
@@ -62,7 +62,9 @@ contract RaffleTest is StdCheats, Test {
         vm.expectRevert(Raffle.Raffle__NotEnoughEthSent.selector);
         raffle.enterRaffle();
     }
-
+    /**Test to see if
+     *  entrant is added to our s_players array
+     */
     function testRaffleRecordsPlayerWhenTheyEnter() public {
         // Arrange
         vm.prank(PLAYER);
@@ -72,7 +74,9 @@ contract RaffleTest is StdCheats, Test {
         address playerRecorded = raffle.getPlayer(0);
         assert(playerRecorded == PLAYER);
     }
-
+    /**Test if event(playerRecorded)
+     *  emits event when new player joins the raffle 
+     */
     function testEmitsEventOnEntrance() public {
         // Arrange
         vm.prank(PLAYER);
@@ -82,7 +86,9 @@ contract RaffleTest is StdCheats, Test {
         emit RaffleEnter(PLAYER);
         raffle.enterRaffle{value: raffleEntranceFee}();
     }
-
+        /**Test if our raffle allows a entrant to enter
+         * if the raffle state is not open or calculating
+         */
     function testDontAllowPlayersToEnterWhileRaffleIsCalculating() public {
         // Arrange
         vm.prank(PLAYER);
