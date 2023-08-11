@@ -134,7 +134,19 @@ contract RaffleTest is StdCheats, Test {
     }
 
     // Can you implement this?
-    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {}
+    function testCheckUpkeepReturnsFalseIfEnoughTimeHasntPassed() public {
+        // Arrange
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: raffleEntranceFee}();
+        vm.warp(block.timestamp + automationUpdateInterval - 1);
+        vm.roll(block.number + 1);
+
+        // Act
+        (bool upkeepNeeded,) = raffle.checkUpkeep("");
+
+        // Assert
+        assert(!upkeepNeeded);
+    }
 
     function testCheckUpkeepReturnsTrueWhenParametersGood() public {
         // Arrange
@@ -150,9 +162,9 @@ contract RaffleTest is StdCheats, Test {
         assert(upkeepNeeded);
     }
 
-    /////////////////////////
-    // performUpkeep       //
-    /////////////////////////
+    /////////////////////
+    /// performUpkeep ///
+    /////////////////////
 
     function testPerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public {
         // Arrange
@@ -198,9 +210,9 @@ contract RaffleTest is StdCheats, Test {
         assert(uint256(raffleState) == 1); // 0 = open, 1 = calculating
     }
 
-    /////////////////////////
-    // fulfillRandomWords //
-    ////////////////////////
+    //////////////////////////
+    /// fulfillRandomWords ///
+    //////////////////////////
 
     modifier raffleEntered() {
         vm.prank(PLAYER);
